@@ -9,6 +9,7 @@ pillow = "*"
 pytesseract = "*"
 numpy = "==1.19.3"
 pywin32 = "*"
+pyinstaller = "*"
 
 [dev-packages]
 
