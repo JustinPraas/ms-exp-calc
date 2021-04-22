@@ -1,5 +1,7 @@
 import collections
 import time
+from datetime import datetime
+
 import numpy as np
 
 from PIL import ImageGrab
@@ -52,7 +54,7 @@ def screenshot(hwnd_maplestory):
     rect = win32gui.GetWindowRect(hwnd_maplestory)
 
     # Return screenshot of cropped image (only the experience part) and scale the image by 3 times
-    img = ImageGrab.grab(rect).crop(XP_TEXT_CROPBOX).resize((3 * XP_TEXT_WIDTH, 3 * XP_TEXT_HEIGHT))
+    img = ImageGrab.grab(rect).crop(XP_TEXT_CROPBOX).resize((8 * XP_TEXT_WIDTH, 8 * XP_TEXT_HEIGHT))
 
     return img
 
@@ -60,16 +62,18 @@ def screenshot(hwnd_maplestory):
 # Returns the bounding box of the experience digits WITHOUT the percentage part
 def get_end_boundary_x(image):
     color = cv2.cvtColor(np.array(image), cv2.COLOR_BGR2HSV)
+    cv2.imshow("color", color)
     mask1 = cv2.inRange(color, (70, 50, 20), (75, 255, 255))
     mask2 = cv2.inRange(color, (130, 50, 20), (135, 255, 255))
 
     # Merge the mask and crop the red regions
     mask = cv2.bitwise_or(mask1, mask2)
-    _, xs = np.nonzero(mask)
+    cv2.imshow("mask", mask)
+    ys, xs = np.nonzero(mask)
 
     if len(xs) > 0:
-        x = xs[0]
-        return max(x - 1, 30)
+        x = min(xs)
+        return x - 1
     else:
         return XP_TEXT_WIDTH
 
@@ -77,17 +81,23 @@ def get_end_boundary_x(image):
 # Processes the screenshot
 def process_screenshot(screenshot_image):
     x = get_end_boundary_x(screenshot_image)
-    gray = cv2.cvtColor(np.array(screenshot_image.crop((0, 0, x, 3 * XP_TEXT_HEIGHT))), cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(np.array(screenshot_image.crop((0, 0, x, 8 * XP_TEXT_HEIGHT))), cv2.COLOR_BGR2GRAY)
+    cv2.imshow("img", gray)
     thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+    cv2.imshow("thresh", thresh)
+    # current_time = str(datetime.now().time()).replace(":", "")
+    # path = ""
+    # cv2.imwrite(current_time + ".png", thresh)
 
     return thresh
 
 
 # Retrieves the experience from the processed screenshots
 def get_exp(processed_screenshot):
-    exp = pytesseract.image_to_string(processed_screenshot, lang="eng", config="-c tessedit_char_whitelist=0123456789")
-    # print("Received exp data: ", exp.strip())
+    exp = pytesseract.image_to_string(processed_screenshot, lang="eng", config="--psm 13 -c tessedit_char_whitelist=0123456789")
+    print("Received exp data:", exp.strip().replace(" ", ""))
     try:
+        cv2.waitKey(0)
         return int(exp)
     except:
         return -1
@@ -152,6 +162,7 @@ def run():
     while True:
         # Make screenshot
         ss = screenshot(hwnd_maplestory)
+
 
         # Process screenshot
         processed_screenshot = process_screenshot(ss)
