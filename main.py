@@ -1,7 +1,6 @@
 import collections
 import time
 import numpy as np
-# import pathlib
 
 from PIL import ImageGrab
 import win32gui
@@ -55,10 +54,6 @@ def screenshot(hwnd_maplestory):
     # Return screenshot of cropped image (only the experience part) and scale the image by 3 times
     img = ImageGrab.grab(rect).crop(XP_TEXT_CROPBOX).resize((3 * XP_TEXT_WIDTH, 3 * XP_TEXT_HEIGHT))
 
-    # Save screenshot
-    # path = str(pathlib.Path(__file__).parent.absolute()) + "/screenshots/screenshot.jpg"
-    # cv2.imwrite(path, np.array(img))
-
     return img
 
 
@@ -85,17 +80,13 @@ def process_screenshot(screenshot_image):
     gray = cv2.cvtColor(np.array(screenshot_image.crop((0, 0, x, 3 * XP_TEXT_HEIGHT))), cv2.COLOR_BGR2GRAY)
     thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
 
-    # Save screenshot
-    # path = str(pathlib.Path(__file__).parent.absolute()) + "/screenshots/thresh.jpg"
-    # cv2.imwrite(path, thresh)
-
     return thresh
 
 
 # Retrieves the experience from the processed screenshots
 def get_exp(processed_screenshot):
     exp = pytesseract.image_to_string(processed_screenshot, lang="eng", config="-c tessedit_char_whitelist=0123456789")
-    print("Received exp data: ", exp.strip())
+    # print("Received exp data: ", exp.strip())
     try:
         return int(exp)
     except:
