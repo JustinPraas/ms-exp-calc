@@ -56,7 +56,7 @@ class Tracker:
         if diff_exp < 0:
             print("==Leveled up")
 
-            previous_exp_diff = diff_exp[len(diff_exp - 1)]
+            previous_exp_diff = self.diff_exp_list[len(self.diff_exp_list)-1]
             self.diff_exp_list.append(previous_exp_diff)
             self.session_exp += previous_exp_diff
             print('==Appending previous exp diff', previous_exp_diff)
