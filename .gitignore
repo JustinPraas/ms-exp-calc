@@ -3,3 +3,4 @@ build
 /trainingimgs/
 /dist/
 /test.png
+/src/__pycache__/

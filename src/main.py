@@ -1,8 +1,6 @@
-import time
-
-from image_processing import get_exp_now
-from tracker import Tracker
+from src.app import App
 
 if __name__ == '__main__':
-    tracker = Tracker()
-    tracker.start()
+    app = App()
+    app.start()
+

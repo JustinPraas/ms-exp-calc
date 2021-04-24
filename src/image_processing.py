@@ -23,31 +23,17 @@ TOP_MOST_CHECKER_X = 600
 TOP_MOST_CHECKER_Y = 595
 TOP_MOST_CROPBOX_CASHSHOP = (TOP_MOST_CHECKER_X, TOP_MOST_CHECKER_Y, TOP_MOST_CHECKER_X + 1, TOP_MOST_CHECKER_Y + 1)
 
-# How long do you want to store data (recommended = 2 < x < 10
-MEASURE_AVERAGE_OVER_X_MINUTES = 6
-
-# The deque length, based on the above values, such that the values in the list is the data of the past X minutes
-DEQUE_LENGTH = (60 * MEASURE_AVERAGE_OVER_X_MINUTES)
-
-# The experience list (values that are fetched from the screenshots)
-expList = collections.deque(maxlen=DEQUE_LENGTH)
-
-# The difference list (diff[1] = exp[1] - exp[0])
-diffList = collections.deque(maxlen=DEQUE_LENGTH)
-
-
 def get_exp_now():
     hwnd_maplestory = get_window()
 
-    while True:
-        # Make screenshot
-        ss = screenshot(hwnd_maplestory)
+    # Make screenshot
+    ss = screenshot(hwnd_maplestory)
 
-        # Process screenshot
-        processed_screenshot = process_screenshot(ss)
+    # Process screenshot
+    processed_screenshot = process_screenshot(ss)
 
-        # Retrieve exp value
-        return get_exp(processed_screenshot)
+    # Retrieve exp value
+    return get_exp(processed_screenshot)
 
 
 # Returns the (first) maplestory hwnd
@@ -71,7 +57,7 @@ def is_top_most_window(rect):
     img_np_cash = np.array(topmost_check_img_cashshop)[0][0]
     img_np_yellow_exp = np.array(topmost_check_img_yellow_exp)[0][0]
 
-    return (img_np_cash[0] == 204 and img_np_cash[1] == 0 and img_np_cash[2] == 34) and not (
+    return (img_np_cash[0] == 204 and img_np_cash[1] == 0 and img_np_cash[2] == 34) or (
                 img_np_yellow_exp[0] == 238 and img_np_yellow_exp[1] == 246 and img_np_yellow_exp[2] == 127)
 
 
@@ -131,10 +117,14 @@ def get_exp(processed_screenshot):
     exp = pytesseract.image_to_string(processed_screenshot, lang="eng",
                                       config="{} --psm 13 -c tessedit_char_whitelist=0123456789".format(
                                           tessdata_dir_config))
+    exp = exp.strip().replace(" ", "")
     # print("Received exp data:", exp.strip().replace(" ", ""))
     try:
         # cv2.waitKey(0)
+        if exp == "":
+            exp = 0
         return int(exp)
-    except:
+    except Exception as e:
         print("Received malformed exp data.")
+        print(e)
         return -1
