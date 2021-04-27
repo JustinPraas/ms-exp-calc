@@ -28,5 +28,6 @@ class App:
         Label(self.frame, text="Session exp: {}".format(self.tracker.session_exp)).pack()
         # Label(self.frame, text="Exp/hour (session): {}".format(self.tracker.session_avg_per_hour)).pack()
         Label(self.frame, text="Exp/hour (5min): {}".format(self.tracker.avg_per_hour)).pack()
+        Label(self.frame, text="Level up estimated at: {}".format(self.tracker.level_up_at.strftime("%H:%M:%S"))).pack()
         Button(self.frame, text="PAUSE" if not self.tracker.paused else "UNPAUSE", command=(self.tracker.set_pause if not self.tracker.paused else self.tracker.set_unpause)).pack()
         self.window.after(1000, self.draw)

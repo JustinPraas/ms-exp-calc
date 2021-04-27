@@ -1,6 +1,10 @@
-import collections
 import pathlib
 import time
+
+# TODO include tesseract in sources
+# TODO exportify project
+# TODO prettify window
+# TODO allow fullscreen
 
 import cv2
 import numpy as np
@@ -17,23 +21,33 @@ XP_TEXT_WIDTH = 98
 XP_TEXT_START_Y = 594
 XP_TEXT_HEIGHT = 11
 XP_TEXT_CROPBOX = (XP_TEXT_START_X, XP_TEXT_START_Y, XP_TEXT_START_X + XP_TEXT_WIDTH, XP_TEXT_START_Y + XP_TEXT_HEIGHT)
-TOP_MOST_CROPBOX_YELLOW_EXP = (XP_TEXT_START_X - 23, XP_TEXT_START_Y + 20, XP_TEXT_START_X - 22, XP_TEXT_START_Y + 21)
+
+LVL_TEXT_START_X = 39
+LVL_TEXT_WIDTH = 38
+LVL_TEXT_START_Y = 603
+LVL_TEXT_HEIGHT = 12
+LVL_TEXT_CROPBOX = (LVL_TEXT_START_X, LVL_TEXT_START_Y, LVL_TEXT_START_X + LVL_TEXT_WIDTH, LVL_TEXT_START_Y + LVL_TEXT_HEIGHT)
 
 TOP_MOST_CHECKER_X = 600
 TOP_MOST_CHECKER_Y = 595
-TOP_MOST_CROPBOX_CASHSHOP = (TOP_MOST_CHECKER_X, TOP_MOST_CHECKER_Y, TOP_MOST_CHECKER_X + 1, TOP_MOST_CHECKER_Y + 1)
 
-def get_exp_now():
+TOP_MOST_CROPBOX_TOP = (XP_TEXT_START_X, XP_TEXT_START_Y - 1, XP_TEXT_START_X + XP_TEXT_WIDTH, XP_TEXT_START_Y)
+TOP_MOST_CROPBOX_BOT = (XP_TEXT_START_X, XP_TEXT_START_Y + XP_TEXT_HEIGHT, XP_TEXT_START_X + XP_TEXT_WIDTH, XP_TEXT_START_Y + XP_TEXT_HEIGHT + 1)
+
+
+def get_level_and_exp_now():
     hwnd_maplestory = get_window()
 
     # Make screenshot
     ss = screenshot(hwnd_maplestory)
+    # is_full_screen =
 
     # Process screenshot
-    processed_screenshot = process_screenshot(ss)
+    processed_screenshot_exp = process_screenshot_exp(ss)
+    processed_screenshot_level = process_screenshot_level(ss)
 
     # Retrieve exp value
-    return get_exp(processed_screenshot)
+    return get_level(processed_screenshot_level), get_exp(processed_screenshot_exp)
 
 
 # Returns the (first) maplestory hwnd
@@ -52,13 +66,19 @@ def get_window():
 
 def is_top_most_window(rect):
     # Check topmost
-    topmost_check_img_cashshop = ImageGrab.grab(rect).crop(TOP_MOST_CROPBOX_CASHSHOP)
-    topmost_check_img_yellow_exp = ImageGrab.grab(rect).crop(TOP_MOST_CROPBOX_YELLOW_EXP)
-    img_np_cash = np.array(topmost_check_img_cashshop)[0][0]
-    img_np_yellow_exp = np.array(topmost_check_img_yellow_exp)[0][0]
+    topmost_check_img_top = ImageGrab.grab(rect).crop(TOP_MOST_CROPBOX_TOP)
+    topmost_check_img_bot = ImageGrab.grab(rect).crop(TOP_MOST_CROPBOX_BOT)
+    img_np_topmost_bot = np.array(topmost_check_img_bot)[0]
+    img_np_topmost_top = np.array(topmost_check_img_top)[0]
 
-    return (img_np_cash[0] == 204 and img_np_cash[1] == 0 and img_np_cash[2] == 34) or (
-                img_np_yellow_exp[0] == 238 and img_np_yellow_exp[1] == 246 and img_np_yellow_exp[2] == 127)
+    for pixel in img_np_topmost_top:
+        if not (96 <= pixel[0] <= 102 and 102 <= pixel[1] <= 108 and pixel[2] == 108):
+            return False
+
+    for pixel in img_np_topmost_bot:
+        if not (45 <= pixel[0] <= 51 and 51 <= pixel[1] <= 57 and 57 <= pixel[2] <= 62):
+            return False
+    return True
 
 
 # Makes a screenshot of the window
@@ -74,7 +94,8 @@ def screenshot(hwnd_maplestory):
         raise Exception("Cashshop or yellow exp not visible, aka not topmost")
 
     # Return screenshot of cropped image (only the experience part) and scale the image by 8 times
-    img = ImageGrab.grab(rect).crop(XP_TEXT_CROPBOX).resize((8 * XP_TEXT_WIDTH, 8 * XP_TEXT_HEIGHT))
+    img = ImageGrab.grab(rect)
+    # img.show()
 
     return img
 
@@ -99,9 +120,10 @@ def get_end_boundary_x(image):
 
 
 # Processes the screenshot
-def process_screenshot(screenshot_image):
-    x = get_end_boundary_x(screenshot_image)
-    gray = cv2.cvtColor(np.array(screenshot_image.crop((0, 0, x, 8 * XP_TEXT_HEIGHT))), cv2.COLOR_BGR2GRAY)
+def process_screenshot_exp(screenshot_image):
+    cropped_img = screenshot_image.crop(XP_TEXT_CROPBOX).resize((8 * XP_TEXT_WIDTH, 8 * XP_TEXT_HEIGHT))
+    x = get_end_boundary_x(cropped_img)
+    gray = cv2.cvtColor(np.array(cropped_img.crop((0, 0, x, 8 * XP_TEXT_HEIGHT))), cv2.COLOR_BGR2GRAY)
     # cv2.imshow("img", gray)
     thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
     # cv2.imshow("thresh", thresh)
@@ -109,6 +131,13 @@ def process_screenshot(screenshot_image):
     # path = ""
     # cv2.imwrite(current_time + ".png", thresh)
 
+    return thresh
+
+
+def process_screenshot_level(screenshot_image):
+    cropped_img = screenshot_image.crop(LVL_TEXT_CROPBOX).resize((4 * LVL_TEXT_WIDTH, 4 * LVL_TEXT_HEIGHT))
+    gray = cv2.cvtColor(np.array(cropped_img), cv2.COLOR_BGR2GRAY)
+    thresh = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)[1]
     return thresh
 
 
@@ -126,5 +155,21 @@ def get_exp(processed_screenshot):
         return int(exp)
     except Exception as e:
         print("Received malformed exp data.")
+        print(e)
+        return -1
+
+
+def get_level(processed_screenshot):
+    level = pytesseract.image_to_string(processed_screenshot, lang="eng",
+                                        config="{} --psm 13 -c tessedit_char_whitelist=0123456789".format(
+                                            tessdata_dir_config))
+    level = level.strip().replace(" ", "")
+    try:
+        # cv2.waitKey(0)
+        if level == "":
+            level = 0
+        return int(level)
+    except Exception as e:
+        print("Received malformed level data.")
         print(e)
         return -1
