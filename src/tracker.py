@@ -5,7 +5,7 @@ from datetime import datetime, date, timedelta
 from image_processing import get_level_and_exp_now
 
 # How long do you want to store data (recommended = 2 < x < 10
-MEASURE_AVERAGE_OVER_X_MINUTES = 5
+MEASURE_AVERAGE_OVER_X_MINUTES = 2
 
 MEASURE_EVERY_X_SECONDS = 2
 

@@ -4,7 +4,7 @@ import time
 # TODO include tesseract in sources
 # TODO exportify project
 # TODO prettify window
-# TODO allow fullscreen
+from datetime import datetime
 
 import cv2
 import numpy as np
@@ -16,35 +16,47 @@ tessdata_path = str(pathlib.Path(__file__).parent.parent / 'tessdata').replace("
 pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 tessdata_dir_config = '--tessdata-dir ' + tessdata_path
 
+FULL_SCREEN_RECT = (0, 0, 800, 600)
+FULL_SCREEN_HEIGHT_DIFF = 26
+FULL_SCREEN_WIDTH_DIFF = 3
+
+
 XP_TEXT_START_X = 468
 XP_TEXT_WIDTH = 98
 XP_TEXT_START_Y = 594
 XP_TEXT_HEIGHT = 11
-XP_TEXT_CROPBOX = (XP_TEXT_START_X, XP_TEXT_START_Y, XP_TEXT_START_X + XP_TEXT_WIDTH, XP_TEXT_START_Y + XP_TEXT_HEIGHT)
+XP_TEXT_RECT = (XP_TEXT_START_X, XP_TEXT_START_Y, XP_TEXT_START_X + XP_TEXT_WIDTH, XP_TEXT_START_Y + XP_TEXT_HEIGHT)
 
 LVL_TEXT_START_X = 39
 LVL_TEXT_WIDTH = 38
 LVL_TEXT_START_Y = 603
 LVL_TEXT_HEIGHT = 12
-LVL_TEXT_CROPBOX = (LVL_TEXT_START_X, LVL_TEXT_START_Y, LVL_TEXT_START_X + LVL_TEXT_WIDTH, LVL_TEXT_START_Y + LVL_TEXT_HEIGHT)
+LVL_TEXT_RECT = (LVL_TEXT_START_X, LVL_TEXT_START_Y, LVL_TEXT_START_X + LVL_TEXT_WIDTH, LVL_TEXT_START_Y + LVL_TEXT_HEIGHT)
 
 TOP_MOST_CHECKER_X = 600
 TOP_MOST_CHECKER_Y = 595
+TOP_MOST_RECT_TOP = (XP_TEXT_START_X, XP_TEXT_START_Y - 1, XP_TEXT_START_X + XP_TEXT_WIDTH, XP_TEXT_START_Y + 5)
+TOP_MOST_RECT_BOT = (XP_TEXT_START_X, XP_TEXT_START_Y + XP_TEXT_HEIGHT, XP_TEXT_START_X + XP_TEXT_WIDTH, XP_TEXT_START_Y + XP_TEXT_HEIGHT + 1)
 
-TOP_MOST_CROPBOX_TOP = (XP_TEXT_START_X, XP_TEXT_START_Y - 1, XP_TEXT_START_X + XP_TEXT_WIDTH, XP_TEXT_START_Y)
-TOP_MOST_CROPBOX_BOT = (XP_TEXT_START_X, XP_TEXT_START_Y + XP_TEXT_HEIGHT, XP_TEXT_START_X + XP_TEXT_WIDTH, XP_TEXT_START_Y + XP_TEXT_HEIGHT + 1)
+
+def get_final_rect(rect, full_screen):
+    if full_screen:
+        return rect[0] - FULL_SCREEN_WIDTH_DIFF, rect[1] - FULL_SCREEN_HEIGHT_DIFF, rect[2] - FULL_SCREEN_WIDTH_DIFF, rect[3] - FULL_SCREEN_HEIGHT_DIFF
+    else:
+        return rect
 
 
 def get_level_and_exp_now():
     hwnd_maplestory = get_window()
 
     # Make screenshot
-    ss = screenshot(hwnd_maplestory)
-    # is_full_screen =
+    ss = screenshot_maple_window(hwnd_maplestory)
+
+    full_screen = is_full_screen(get_maple_window_rectangle(hwnd_maplestory))
 
     # Process screenshot
-    processed_screenshot_exp = process_screenshot_exp(ss)
-    processed_screenshot_level = process_screenshot_level(ss)
+    processed_screenshot_exp = process_screenshot_exp(ss, full_screen)
+    processed_screenshot_level = process_screenshot_level(ss, full_screen)
 
     # Retrieve exp value
     return get_level(processed_screenshot_level), get_exp(processed_screenshot_exp)
@@ -64,12 +76,21 @@ def get_window():
     return maple_story[0]
 
 
-def is_top_most_window(rect):
+def is_full_screen(rect):
+    return rect == FULL_SCREEN_RECT
+
+
+def is_top_most_window(ss_rect):
+
+    # Check if fullscreen
+    full_screen = is_full_screen(ss_rect)
+
     # Check topmost
-    topmost_check_img_top = ImageGrab.grab(rect).crop(TOP_MOST_CROPBOX_TOP)
-    topmost_check_img_bot = ImageGrab.grab(rect).crop(TOP_MOST_CROPBOX_BOT)
-    img_np_topmost_bot = np.array(topmost_check_img_bot)[0]
+    topmost_check_img_top = ImageGrab.grab(ss_rect).crop(get_final_rect(TOP_MOST_RECT_TOP, full_screen))
+    topmost_check_img_bot = ImageGrab.grab(ss_rect).crop(get_final_rect(TOP_MOST_RECT_BOT, full_screen))
+
     img_np_topmost_top = np.array(topmost_check_img_top)[0]
+    img_np_topmost_bot = np.array(topmost_check_img_bot)[0]
 
     for pixel in img_np_topmost_top:
         if not (96 <= pixel[0] <= 102 and 102 <= pixel[1] <= 108 and pixel[2] == 108):
@@ -81,13 +102,17 @@ def is_top_most_window(rect):
     return True
 
 
+def get_maple_window_rectangle(hwnd_maplestory):
+    return win32gui.GetWindowRect(hwnd_maplestory)
+
+
 # Makes a screenshot of the window
-def screenshot(hwnd_maplestory):
+def screenshot_maple_window(hwnd_maplestory):
     # Give time for window to popup
     time.sleep(0.05)
 
     # Get the rectangle of the window
-    rect = win32gui.GetWindowRect(hwnd_maplestory)
+    rect = get_maple_window_rectangle(hwnd_maplestory)
 
     # Cashshop and exp check
     if not (is_top_most_window(rect)):
@@ -120,23 +145,37 @@ def get_end_boundary_x(image):
 
 
 # Processes the screenshot
-def process_screenshot_exp(screenshot_image):
-    cropped_img = screenshot_image.crop(XP_TEXT_CROPBOX).resize((8 * XP_TEXT_WIDTH, 8 * XP_TEXT_HEIGHT))
-    x = get_end_boundary_x(cropped_img)
-    gray = cv2.cvtColor(np.array(cropped_img.crop((0, 0, x, 8 * XP_TEXT_HEIGHT))), cv2.COLOR_BGR2GRAY)
+def process_screenshot_exp(screenshot_image, full_screen):
+
+    # Get proper rect and resize
+    crop_rect = get_final_rect(XP_TEXT_RECT, full_screen)
+    cropped_img = screenshot_image.crop(crop_rect)
+    resized_img = cropped_img.resize((8 * XP_TEXT_WIDTH, 8 * XP_TEXT_HEIGHT))
+
+    # Trim off redundant space after text (based on the [ in the exp text)
+    x = get_end_boundary_x(resized_img)
+    trimmed_img = resized_img.crop((0, 0, x, 8 * XP_TEXT_HEIGHT))
+
+    # Grayify
+    gray = cv2.cvtColor(np.array(trimmed_img), cv2.COLOR_BGR2GRAY)
     # cv2.imshow("img", gray)
+
+    # Threshify
     thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
     # cv2.imshow("thresh", thresh)
-    # current_time = str(datetime.now().time()).replace(":", "")
-    # path = ""
-    # cv2.imwrite(current_time + ".png", thresh)
+
+    # current_time = str(datetime.now().time().microsecond)
+    # print(current_time)
+    # cv2.imwrite(current_time + ".jpg", thresh)
 
     return thresh
 
 
-def process_screenshot_level(screenshot_image):
-    cropped_img = screenshot_image.crop(LVL_TEXT_CROPBOX).resize((4 * LVL_TEXT_WIDTH, 4 * LVL_TEXT_HEIGHT))
-    gray = cv2.cvtColor(np.array(cropped_img), cv2.COLOR_BGR2GRAY)
+def process_screenshot_level(screenshot_image, full_screen):
+    crop_rect = get_final_rect(LVL_TEXT_RECT, full_screen)
+    cropped_img = screenshot_image.crop(crop_rect)
+    resized_img = cropped_img.resize((4 * LVL_TEXT_WIDTH, 4 * LVL_TEXT_HEIGHT))
+    gray = cv2.cvtColor(np.array(resized_img), cv2.COLOR_BGR2GRAY)
     thresh = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)[1]
     return thresh
 
