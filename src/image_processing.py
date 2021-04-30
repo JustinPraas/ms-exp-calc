@@ -1,7 +1,6 @@
 import pathlib
 import time
 
-# TODO include tesseract in sources
 # TODO exportify project
 # TODO prettify window
 from datetime import datetime
@@ -13,7 +12,8 @@ from PIL import ImageGrab
 from pytesseract import pytesseract
 
 tessdata_path = str(pathlib.Path(__file__).parent.parent / 'tessdata').replace("\\", "/")
-pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+tessocr_path = str(pathlib.Path(__file__).parent.parent / 'Tesseract-OCR/tesseract.exe').replace("\\", "/")
+pytesseract.tesseract_cmd = tessocr_path
 tessdata_dir_config = '--tessdata-dir ' + tessdata_path
 
 FULL_SCREEN_RECT = (0, 0, 800, 600)
