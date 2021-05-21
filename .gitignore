@@ -1,4 +1,6 @@
 .idea
+dist
+__pycache__
 build
 /trainingimgs/
 /dist/
