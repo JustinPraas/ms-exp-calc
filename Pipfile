@@ -9,9 +9,8 @@ pillow = "*"
 pytesseract = "*"
 numpy = "==1.19.3"
 pywin32 = "*"
-pyinstaller = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.8"
+python_version = "3.6"

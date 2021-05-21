@@ -11,25 +11,29 @@ import numpy as np
 import win32gui
 from PIL import ImageGrab
 from pytesseract import pytesseract
+import sys
 
 tessdata_path = str(pathlib.Path(__file__).parent.parent / 'tessdata').replace("\\", "/")
-pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+tessocr_path = str(pathlib.Path(__file__).parent.parent / 'Tesseract-OCR/tesseract.exe').replace("\\", "/")
+pytesseract.tesseract_cmd = tessocr_path
 tessdata_dir_config = '--tessdata-dir ' + tessdata_path
 
-FULL_SCREEN_RECT = (0, 0, 800, 600)
+hd = True if "hd" in sys.argv else False
+
+FULL_SCREEN_RECT = (0, 0, 800, 600) if hd else (0, 0, 1366, 768)
 FULL_SCREEN_HEIGHT_DIFF = 26
 FULL_SCREEN_WIDTH_DIFF = 3
 
 
 XP_TEXT_START_X = 468
 XP_TEXT_WIDTH = 98
-XP_TEXT_START_Y = 594
+XP_TEXT_START_Y = 594 if not hd else 594 + 168
 XP_TEXT_HEIGHT = 11
 XP_TEXT_RECT = (XP_TEXT_START_X, XP_TEXT_START_Y, XP_TEXT_START_X + XP_TEXT_WIDTH, XP_TEXT_START_Y + XP_TEXT_HEIGHT)
 
 LVL_TEXT_START_X = 39
 LVL_TEXT_WIDTH = 38
-LVL_TEXT_START_Y = 603
+LVL_TEXT_START_Y = 603 if not hd else 603 + 168
 LVL_TEXT_HEIGHT = 12
 LVL_TEXT_RECT = (LVL_TEXT_START_X, LVL_TEXT_START_Y, LVL_TEXT_START_X + LVL_TEXT_WIDTH, LVL_TEXT_START_Y + LVL_TEXT_HEIGHT)
 

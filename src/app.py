@@ -1,7 +1,7 @@
 import threading
 from tkinter import *
 
-from src.tracker import Tracker
+from tracker import Tracker
 
 
 class App:
@@ -25,9 +25,11 @@ class App:
         self.frame.pack()
 
         Label(self.frame, text="Session Start: {}".format(self.tracker.session_start.strftime("%H:%M:%S"))).pack()
+        Label(self.frame, text="Session duration: {}".format(str(self.tracker.session_duration).split(".")[0])).pack()
         Label(self.frame, text="Session exp: {}".format(self.tracker.session_exp)).pack()
+        Label(self.frame, text="Session exp/h: {}".format(self.tracker.session_avg_per_hour)).pack()
         # Label(self.frame, text="Exp/hour (session): {}".format(self.tracker.session_avg_per_hour)).pack()
         Label(self.frame, text="Exp/hour (5min): {}".format(self.tracker.avg_per_hour)).pack()
         Label(self.frame, text="Level up estimated at: {}".format(self.tracker.level_up_at.strftime("%H:%M:%S"))).pack()
-        Button(self.frame, text="PAUSE" if not self.tracker.paused else "UNPAUSE", command=(self.tracker.set_pause if not self.tracker.paused else self.tracker.set_unpause)).pack()
+        Label(self.frame, text="Made by Bushido").pack()
         self.window.after(1000, self.draw)

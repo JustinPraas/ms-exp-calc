@@ -5,7 +5,7 @@ from datetime import datetime, date, timedelta
 from image_processing import get_level_and_exp_now
 
 # How long do you want to store data (recommended = 2 < x < 10
-MEASURE_AVERAGE_OVER_X_MINUTES = 2
+MEASURE_AVERAGE_OVER_X_MINUTES = 20
 
 MEASURE_EVERY_X_SECONDS = 2
 
@@ -35,6 +35,7 @@ EXP_TABLE = [15, 34, 57, 92, 135, 272, 391, 555, 709, 1077, 1493, 1934, 2611, 34
 class Tracker:
     def __init__(self):
         self.session_exp = 0
+        self.session_duration = datetime.min
         self.session_start = datetime.now()
         self.session_avg_per_hour = 0
         self.avg_per_hour = 0
@@ -53,6 +54,7 @@ class Tracker:
                     (level, exp) = get_level_and_exp_now()
                     self.process_exp(exp)
                     self.avg_per_hour = self.calculate_avg_exp_hour()
+                    self.session_avg_per_hour = self.calculate_session_average()
 
                     self.level = level
                     self.level_up_at = self.calculate_level_up_at(level, exp)
@@ -97,9 +99,11 @@ class Tracker:
     def calculate_session_average(self):
         timediff = datetime.combine(date.today(), datetime.now().time()) - datetime.combine(date.today(),
                                                                                             self.session_start.time())
-        print(timediff.seconds)
+        self.session_duration = timediff
+
         average_exp_per_second = self.session_exp / max(timediff.seconds, 1)
         return max(0, int(average_exp_per_second * 60 * 60))
+
 
     ''' datetime.time '''
     def calculate_level_up_at(self, level, current_exp):
