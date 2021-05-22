@@ -1,7 +1,6 @@
 import pathlib
 import time
 
-# TODO include tesseract in sources
 # TODO exportify project
 # TODO prettify window
 from datetime import datetime
